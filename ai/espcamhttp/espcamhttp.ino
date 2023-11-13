@@ -26,33 +26,33 @@
 
 #include "esp_wpa2.h"
 
-// ===== config =====
-// Set as 1 if using school wifi 
-#define SCHOOL_WIFI 0
-// ===== mqtt secrets =====
-// Replace ip address with ip of your windows 
-// Click "properties" of the wifi you're currently connected to 
-// and look for the ipv4 address
-//#define SERVER "mqtt://0.0.0.0"
-// ===== wifi secrets =====
-#define SSID ""
-#define PASSWD ""
-// ===== school wifi secrets =====
-#define NUS_NET_IDENTITY "nusstu\e"  //ie nusstu\e0123456
-#define NUS_NET_USERNAME ""
-#define NUS_NET_PASSWORD ""
+// Comment out whicever WiFi setup applicable
+//#define SCHOOL_WIFI 1
+//#define HOME_WIFI 1
 
-#ifdef SCHOOL_WIFI
- const char ssid[] = "NUS_STU";
-#else
+#if defined(SCHOOL_WIFI)
+  #define NUS_NET_IDENTITY  "nusstu\e"
+  #define NUS_NET_USERNAME  "e"
+  #define NUS_NET_PASSWORD  ""
+  const char ssid[] =       "NUS_STU";
+
+#elif defined(HOME_WIFI)
+  #define SSID              ""
+  #define PASSWD            ""
   const char ssid[] = SSID;
   const char passwd[] = PASSWD;
+#else
+#error "Something's wrong."
 #endif
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 
 boolean takeNewPhoto = false;
+
+// PIR Sensor 
+int state = LOW;             // by default, no motion detected
+int val = 0; 
 
 // Photo File Name to save in SPIFFS
 #define FILE_PHOTO "/photo.jpg"
@@ -116,19 +116,24 @@ const char index_html[] PROGMEM = R"rawliteral(
 </script>
 </html>)rawliteral";
 
+// SETUP START ////////////////////////////////////////////////////////////////////////////////////////
 void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
   pinMode(LED_GPIO_NUM, OUTPUT);
+  pinMode(GPIO_NUM_13, INPUT);
+
   // Connect to Wi-Fi
-#ifdef SCHOOL_WIFI
+  #if defined(SCHOOL_WIFI)
     WiFi.begin(ssid, WPA2_AUTH_PEAP, NUS_NET_IDENTITY, NUS_NET_USERNAME, NUS_NET_PASSWORD); 
-#else
+  #elif defined(HOME_WIFI)
     WiFi.begin(ssid, passwd);
-#endif
+  #endif
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
-    Serial.println("Connecting to WiFi...");
+    Serial.print("Connecting to WiFi: ");
+    Serial.println(ssid);
   }
   if (!SPIFFS.begin(true)) {
     Serial.println("An Error has occurred while mounting SPIFFS");
@@ -172,6 +177,7 @@ void setup() {
   config.frame_size = FRAMESIZE_VGA;
   config.jpeg_quality = 10;
   config.fb_count = 2;
+  config.grab_mode = CAMERA_GRAB_LATEST;
 
   // if (psramFound()) {
   //   config.frame_size = FRAMESIZE_UXGA;
@@ -207,15 +213,46 @@ void setup() {
   // Start server
   server.begin();
 
-}
+  // esp_sleep_enable_ext0_wakeup(GPIO_NUM_13, 0);
+ 
+  // Serial.println("Going to sleep now");
+  // delay(1000);
+  // esp_deep_sleep_start();
+  // Serial.println("This will never be printed");
 
+}
+// SETUP END ////////////////////////////////////////////////////////////////////////////////////////
+
+
+// LOOP START ///////////////////////////////////////////////////////////////////////////////////////
 void loop() {
+  // Code for detecting start and end of motion
+  val = digitalRead(GPIO_NUM_13);
+  Serial.println(val);
+  if (val == HIGH) {           // check if the sensor is HIGH
+    delay(200);                
+    if (state == LOW) {
+      Serial.println("Motion detected!"); 
+      state = HIGH;       // update variable state to HIGH
+    }
+  } 
+  else {
+      delay(200);             
+      if (state == HIGH){
+        Serial.println("Motion stopped!");
+        state = LOW;       // update variable state to LOW
+        takeNewPhoto = true;
+    }
+  }
+
   if (takeNewPhoto) {
     capturePhotoSaveSpiffs();
     takeNewPhoto = false;
   }
   delay(1);
 }
+// LOOP END /////////////////////////////////////////////////////////////////////////////////////////
+
 
 // Check if photo capture was successful
 bool checkPhoto( fs::FS &fs ) {
@@ -233,10 +270,11 @@ void capturePhotoSaveSpiffs( void ) {
     // Take a photo with the camera
     Serial.println("Taking a photo...");
 
-  digitalWrite(LED_GPIO_NUM, HIGH);   // turn the LED on
-  delay(500);                       
+  // digitalWrite(LED_GPIO_NUM, HIGH);   // turn the LED on
+  // delay(300);                       
   fb = esp_camera_fb_get();
-  digitalWrite(LED_GPIO_NUM, LOW);    // turn the LED off
+  // delay(50);
+  // digitalWrite(LED_GPIO_NUM, LOW);    // turn the LED off
   if (!fb) {
       Serial.println("Camera capture failed");
       return;
