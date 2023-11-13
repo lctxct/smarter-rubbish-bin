@@ -13,18 +13,18 @@ DIR = "dataset-resized"
 # classes = train_dataset.class_names
 # numClasses = len(train_dataset.class_names)
 # print(classes)
-CLASSES = ['cardboard', 'glass', 'metal', 'paper', 'plastic', 'trash']
-# img_data = requests.get("https://images.unsplash.com/photo-1591872203534-278fc084969e?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1064&q=80").content
-# with open('img.jpg', 'wb') as handler:
-#     handler.write(img_data)
-IMG_PATH = "img.jpg"
+CLASSES = ['ewaste', 'glass', 'metal', 'paper', 'plastic', 'trash']
+# # img_data = requests.get("https://images.unsplash.com/photo-1591872203534-278fc084969e?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1064&q=80").content
+# # with open('img.jpg', 'wb') as handler:
+# #     handler.write(img_data)
+IMG_PATH = "./ai/img.jpg"
+MODEL = "./ai/model2.h5"
+# train_dataset = tf.keras.preprocessing.image_dataset_from_directory(DIR, validation_split=0.1, subset="training", seed=42, batch_size=128, smart_resize=True, image_size=(256, 256))
+# test_dataset = tf.keras.preprocessing.image_dataset_from_directory(DIR, validation_split=0.1, subset="validation", seed=42, batch_size=128, smart_resize=True, image_size=(256, 256))
 
-train_dataset = tf.keras.preprocessing.image_dataset_from_directory(DIR, validation_split=0.1, subset="training", seed=42, batch_size=128, smart_resize=True, image_size=(256, 256))
-test_dataset = tf.keras.preprocessing.image_dataset_from_directory(DIR, validation_split=0.1, subset="validation", seed=42, batch_size=128, smart_resize=True, image_size=(256, 256))
+# AUTOTUNE = tf.data.AUTOTUNE
 
-AUTOTUNE = tf.data.AUTOTUNE
-
-train_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
+# train_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
 
 
 def predict(model):
@@ -40,5 +40,5 @@ def predict(model):
 
 
 if __name__ == "__main__":
-    model = tf.keras.saving.load_model("model.h5")
+    model = tf.keras.saving.load_model(MODEL)
     predict(model)

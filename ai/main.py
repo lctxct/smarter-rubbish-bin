@@ -15,17 +15,19 @@ from urllib.request import urlopen, Request
  
 import threading
 
-CLASSES = ['cardboard', 'glass', 'metal', 'paper', 'plastic', 'trash']
+CLASSES = ['ewaste', 'glass', 'metal', 'paper', 'plastic', 'trash']
 IMG_PATH = "./ai/img.jpg"
 MODEL_PATH = "./ai/model.h5"
-# IMG_PATH = "img.jpg"
-# MODEL_PATH = "model.h5"
-IMG_URL = 'http://0.0.0.0/saved-photo'
 
+CAM_IP = 'http://'
+IMG_SUB_URL = '/saved-photo'
+POLL_DELAY = 3
 
 def saveImage(img_url):
     img = Image.open(requests.get(img_url, stream = True).raw)
     img.save(IMG_PATH)
+    print("Image saved as" + IMG_PATH)
+    #img.save(IMG_PATH)
 
 
 def pollWebServer(img_url, model):
@@ -36,11 +38,12 @@ def pollWebServer(img_url, model):
     url = Request(img_url)
     response = urlopen(url).read()
     currentHash = hashlib.sha224(response).hexdigest()
+    count = 0
     print("Polling Web Server...")
 
     while (True):
         try:
-            time.sleep(3)
+            time.sleep(POLL_DELAY)
             response = urlopen(url).read()
             newHash = hashlib.sha224(response).hexdigest()
 
@@ -48,9 +51,11 @@ def pollWebServer(img_url, model):
                 print("New Image found!")
                 currentHash = newHash
                 saveImage(img_url)
-                predict(model)
+                prediction, confidence = predict(model)
+                sendByMqtt(prediction, confidence)
             else:
-                print("No change...")
+                print("No change...") if (count % 2 == 0) else print("No change..")
+                count += 1
         except Exception as e:
             print("error")
 
@@ -64,12 +69,18 @@ def predict(model):
 
     plt.imshow(img)
     print(predictions[0]*100, "\n", CLASSES)
+    prediction = CLASSES[np.argmax(predictions)]
+    confidence = predictions[0][np.argmax(predictions)] * 100
     print("Prediction: ", CLASSES[np.argmax(predictions)], f"{predictions[0][np.argmax(predictions)]*100}%")
+    return prediction, confidence
+
+def sendByMqtt(prediction, confidence):
+    
+    return
 
 
 if __name__ == "__main__":
     #getImage() 
     model = tf.keras.saving.load_model(MODEL_PATH)
     #while (True):
-    pollWebServer(IMG_URL, model)
-        #predict(model)
+    pollWebServer(CAM_IP + IMG_SUB_URL, model)
