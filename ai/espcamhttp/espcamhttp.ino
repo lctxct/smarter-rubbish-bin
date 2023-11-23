@@ -9,6 +9,8 @@
   
   The above copyright notice and this permission notice shall be included in all
   copies or substantial portions of the Software.
+
+  Modified to work for CG3237 Team Recycling's Project
 *********/
 
 #include <WiFi.h>
@@ -26,13 +28,13 @@
 
 #include "esp_wpa2.h"
 
-// Comment out whicever WiFi setup applicable
+// Define only the WiFi setup of choice
 //#define SCHOOL_WIFI 1
-//#define HOME_WIFI 1
+#define HOME_WIFI 1
 
 #if defined(SCHOOL_WIFI)
-  #define NUS_NET_IDENTITY  "nusstu\e"
-  #define NUS_NET_USERNAME  "e"
+  #define NUS_NET_IDENTITY  "nusstu\e*******"
+  #define NUS_NET_USERNAME  "e*******"
   #define NUS_NET_PASSWORD  ""
   const char ssid[] =       "NUS_STU";
 
